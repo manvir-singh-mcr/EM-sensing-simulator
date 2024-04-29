@@ -252,12 +252,9 @@ def forward_modeling():
     forward_modeling_canvas.draw()
     
 def set_axes_equal(ax):
-    """
-    Make axes of 3D plot have equal scale so that spheres appear as spheres,
-    cubes as cubes, etc.
-    Input
-      ax: a matplotlib axis, e.g., as output from plt.gca().
-    """
+    
+   # Make axes of 3D plot have equal scale
+
     x_limits = ax.get_xlim3d()
     y_limits = ax.get_ylim3d()
     z_limits = ax.get_zlim3d()
@@ -317,8 +314,71 @@ def load_coil_data():
         coordinates_text.insert(tk.END, coordinates)
 
         print(f"Loaded coil data from {filename}")    
+        
+def save_all_coils_data():
+    filename = tk.filedialog.asksaveasfilename(
+        defaultextension=".csv",
+        filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+        title="Save all coils data as..."
+    )
     
+    if filename:  # Check if a filename was selected
+        with open(filename, 'w', newline='') as file:
+            writer = csv.writer(file)
+            for coil in coils:
+                writer.writerow([coil['name']])  # Write coil name
+                for point in coil['points']:
+                    writer.writerow(point)  # Write coil points
+                writer.writerow([])  # Add a blank row after each coil for separation
 
+        print(f"All coil data saved to {filename}")
+
+def load_all_coils_data():
+    filename = tk.filedialog.askopenfilename(
+        title="Select all coils data file",
+        filetypes=(("CSV files", "*.csv"), ("All files", "*.*"))
+    )
+
+    if filename:
+        with open(filename, 'r') as file:
+            reader = csv.reader(file)
+            coils.clear()  # Clear existing coils
+            coil_data = []
+            coil_name = None
+            for row in reader:
+                if not row:
+                    if coil_data and coil_name:
+                        # Convert collected points and add to coils list
+                        coil_points = np.array(coil_data, dtype=float)
+                        coils.append({'name': coil_name, 'points': coil_points})
+                        coil_data = []
+                        coil_name = None
+                elif coil_name is None:
+                    coil_name = row[0]  # First non-empty row is the coil name
+                else:
+                    coil_data.append(row)  # Collect coil point data
+
+            if coil_data and coil_name:
+                # Add the last coil if file does not end with a blank row
+                coil_points = np.array(coil_data, dtype=float)
+                coils.append({'name': coil_name, 'points': coil_points})
+
+        refresh_coil_listboxes()  # Refresh UI with new coil data
+        coil_name_entry.delete(0, tk.END)
+        num_corners_entry.delete(0, tk.END)
+        coordinates_text.delete('1.0', tk.END)
+        ax.clear()
+        for coil in coils:
+            ax.plot(coil['points'][:, 0], coil['points'][:, 1], coil['points'][:, 2], label=coil['name'])
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.set_title('Metallic Coils in 3D Space')
+        set_axes_equal(ax)
+        ax.legend()
+        canvas.draw()   
+        print(f"Loaded all coil data from {filename}")
+    
 
 # Create the main window for the application
 root = tk.Tk()
@@ -372,10 +432,20 @@ save_button.grid(row=1, column=20, columnspan=2)
 load_button = tk.Button(tab1, text="Load Coil Data", command=load_coil_data)
 load_button.grid(row=2, column=20, columnspan=2)
 
+# Button to save all coil data
+save_all_coils_button = tk.Button(tab1, text="Save All Coil Data", command=save_all_coils_data)
+save_all_coils_button.grid(row=1, column=30, columnspan=2)
+
+# Button to load all coil data
+load_all_coils_button = tk.Button(tab1, text="Load All Coil Data", command=load_all_coils_data)
+load_all_coils_button.grid(row=2, column=30, columnspan=2)
 
 # COIL SELECTION TAB
 coil_selection_tab = ttk.Frame(notebook)
 notebook.add(coil_selection_tab, text="Coil Selection")
+# Disclaimer Label
+disclaimer_label = tk.Label(coil_selection_tab, text="To define a channel: \nFirst select Transmit Coil, then select Receive Coil \nthen click Generate Channels", justify=tk.LEFT)
+disclaimer_label.grid(row=2, column=3, columnspan=2, sticky="w", pady=(5, 5))
 
 # Transmit Coils Listbox
 tk.Label(coil_selection_tab, text="Transmit Coils").grid(row=0, column=0)
@@ -672,8 +742,6 @@ regularisedheader = tk.Text(inverse_tab, height=1, width=35)
 regularisedheader.insert("1.0", "After Tikhinov regularisation")
 regularisedheader.pack()
 m_matrix_displayregularised = tk.Text(inverse_tab, height=5, width=35)
-#M_matrixreg_str = '\n'.join(['\t'.join([f"{item:.4f}" for item in row]) for row in M_matrixreg])
-#m_matrix_displayregularised.insert =(M_matrixreg) 
 m_matrix_displayregularised.pack()
 
 # Layout of the plots 
@@ -749,7 +817,7 @@ def display_magnetic_field_heatmaps_log_scale_for_one_coil():
         ax.set_title(title)
 
     # Add a colorbar to the figure
-    fig.colorbar(img, ax=axs.ravel().tolist(), orientation='vertical', label='Magnetic Field Magnitude (log scale)')
+    fig.colorbar(img, ax=axs.ravel().tolist(), orientation='vertical', label='Magnetic Field Intensity Magnitude (log scale)')
 
     # Embed the figure into the Tkinter GUI
     canvas = FigureCanvasTkAgg(fig, master=visualizer_tab) 
