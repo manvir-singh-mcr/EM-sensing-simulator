@@ -444,7 +444,8 @@ load_all_coils_button.grid(row=2, column=30, columnspan=2)
 coil_selection_tab = ttk.Frame(notebook)
 notebook.add(coil_selection_tab, text="Coil Selection")
 # Disclaimer Label
-disclaimer_label = tk.Label(coil_selection_tab, text="To define a channel: \nFirst select Transmit Coil, then select Receive Coil \nthen click Generate Channels", justify=tk.LEFT)
+discl="     To define a channel: \n     First select Transmit Coil, then select Receive Coil \n     then click Generate Channels"
+disclaimer_label = tk.Label(coil_selection_tab, text=discl, justify=tk.LEFT)
 disclaimer_label.grid(row=2, column=3, columnspan=2, sticky="w", pady=(5, 5))
 
 # Transmit Coils Listbox
